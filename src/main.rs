@@ -1,3 +1,4 @@
+use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use tokio::{fs::File, io::AsyncReadExt};
 
@@ -20,8 +21,15 @@ async fn main() -> std::io::Result<()> {
     dump_classes::dump_classes().await?;
     dump_spells::dump_spells().await?;
 
-    HttpServer::new(|| {
+    let config = GovernorConfigBuilder::default()
+        .per_second(2)
+        .burst_size(5)
+        .finish()
+        .unwrap();
+
+    HttpServer::new(move || {
         App::new()
+            .wrap(Governor::new(&config))
             .service(npc)
             .service(item)
             .service(class)
