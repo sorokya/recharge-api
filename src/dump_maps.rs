@@ -68,10 +68,10 @@ pub async fn dump_map(path: PathBuf) -> std::io::Result<()> {
         reader.seek(SeekFrom::Current(5)).await?;
 
         let speed = read_int(&mut reader, 1).await?;
+        let time = read_int(&mut reader, 2).await?;
 
-        reader.seek(SeekFrom::Current(2)).await?;
+        reader.seek(SeekFrom::Current(1)).await?;
 
-        let time = read_int(&mut reader, 1).await?;
         let amount = read_int(&mut reader, 1).await?;
 
         map.npcs.push(NpcSpawn {
@@ -84,7 +84,7 @@ pub async fn dump_map(path: PathBuf) -> std::io::Result<()> {
         });
     }
 
-    let speed = read_int(&mut reader, 1).await?;
+    reader.seek(SeekFrom::Current(1)).await?;
 
     let num_of_items = read_int(&mut reader, 1).await?;
     for _ in 0..num_of_items {
