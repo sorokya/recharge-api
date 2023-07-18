@@ -2,6 +2,8 @@ use actix_governor::{Governor, GovernorConfigBuilder};
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use tokio::{fs::File, io::AsyncReadExt};
 
+extern crate glob;
+
 mod decode_int;
 mod dump_classes;
 mod dump_items;
@@ -13,6 +15,8 @@ mod enf_record;
 mod esf_record;
 mod read;
 mod write_json_file;
+mod emf;
+mod dump_maps;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -20,6 +24,7 @@ async fn main() -> std::io::Result<()> {
     dump_npcs::dump_npcs().await?;
     dump_classes::dump_classes().await?;
     dump_spells::dump_spells().await?;
+    dump_maps::dump_maps().await?;
 
     let config = GovernorConfigBuilder::default()
         .per_second(2)
@@ -34,6 +39,7 @@ async fn main() -> std::io::Result<()> {
             .service(item)
             .service(class)
             .service(spell)
+            .service(map)
     })
     .bind(("127.0.0.1", 27631))?
     .run()
@@ -109,6 +115,25 @@ async fn spell(path: web::Path<u32>) -> impl Responder {
     match file.read_to_end(&mut buf).await {
         Ok(_) => (),
         Err(_) => return HttpResponse::InternalServerError().body("Failed to read Spell file"),
+    }
+
+    HttpResponse::Ok()
+        .content_type("application/json")
+        .body(buf)
+}
+
+#[get("/map/{id}")]
+async fn map(path: web::Path<u32>) -> impl Responder {
+    let mut file = match File::open(format!("dump/maps/{}.json", path.into_inner())).await {
+        Ok(file) => file,
+        Err(_) => return HttpResponse::NotFound().body("Map not found"),
+    };
+
+    let mut buf = Vec::with_capacity(file.metadata().await.unwrap().len() as usize);
+
+    match file.read_to_end(&mut buf).await {
+        Ok(_) => (),
+        Err(_) => return HttpResponse::InternalServerError().body("Failed to read Map file"),
     }
 
     HttpResponse::Ok()
